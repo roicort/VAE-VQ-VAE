@@ -1,0 +1,26 @@
+[project]
+name = "VAE-VQ-VAE"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "docopt",
+    "pypng",
+    "seaborn",
+    "numpy",
+    "pandas",
+    "matplotlib",
+    "protobuf",
+    "h5py",
+    "tqdm",
+    "joblib",
+    "jupyterlab",
+    "scipy>=1.16.1",
+    "tensorflow-metal>=1.2.0",
+    "tensorflow==2.18.1; sys_platform == 'darwin'",
+    "tensorflow-metal==1.2.0; sys_platform == 'darwin'",
+    "tensorflow[and-cuda]==2.18.1; sys_platform == 'linux'",
+    "tensorflow-datasets>=4.9.9",
+    "scikit-learn>=1.7.2",
+]
