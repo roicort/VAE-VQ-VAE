@@ -5,7 +5,7 @@ from tensorflow import keras as K
 
 class VQVAE(K.Model):
 
-    def __init__(self, image_size, channels, latent_dim, train_variance, num_embeddings=64, beta=0.25, **kwargs):
+    def __init__(self, image_size, channels, latent_dim, train_variance, num_embeddings=64, beta=0.25, decoder=None, **kwargs):
         super().__init__(**kwargs)
         self.IMAGE_SIZE = image_size
         self.channels = channels
@@ -83,11 +83,14 @@ class VQVAE(K.Model):
         self.encoder = K.Model(encoder_inputs, encoder_outputs, name="encoder")
 
         # Decoder
-        latent_inputs = K.layers.Input(shape=self.encoder.output.shape[1:])
-        x = K.layers.Conv2DTranspose(64, 3, activation="relu", strides=2, padding="same")(latent_inputs)
-        x = K.layers.Conv2DTranspose(32, 3, activation="relu", strides=2, padding="same")(x)
-        decoder_outputs = K.layers.Conv2DTranspose(self.channels, 3, padding="same", activation="sigmoid")(x)
-        self.decoder = K.Model(latent_inputs, decoder_outputs, name="decoder")
+        if decoder is not None:
+            self.decoder = decoder
+        else:
+            latent_inputs = K.layers.Input(shape=self.encoder.output.shape[1:])
+            x = K.layers.Conv2DTranspose(64, 3, activation="relu", strides=2, padding="same")(latent_inputs)
+            x = K.layers.Conv2DTranspose(32, 3, activation="relu", strides=2, padding="same")(x)
+            decoder_outputs = K.layers.Conv2DTranspose(self.channels, 3, padding="same", activation="sigmoid")(x)
+            self.decoder = K.Model(latent_inputs, decoder_outputs, name="decoder")
 
         self.total_loss_tracker = K.metrics.Mean(name="total_loss")
         self.reconstruction_loss_tracker = K.metrics.Mean(name="reconstruction_loss")

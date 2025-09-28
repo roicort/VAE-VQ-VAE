@@ -5,7 +5,7 @@ from tensorflow import keras as K
 
 class VAE(K.Model):
 
-    def __init__(self, image_size, channels, latent_dim, **kwargs):
+    def __init__(self, image_size, channels, latent_dim, decoder=None, **kwargs):
         super().__init__(**kwargs)
 
         self.IMAGE_SIZE = image_size
@@ -38,13 +38,16 @@ class VAE(K.Model):
         self.encoder = K.Model(encoder_inputs, [z_mean, z_log_var, z], name='encoder')
 
         # Decoder
-        latent_inputs = K.layers.Input(shape=(self.latent_dim,))
-        x = K.layers.Dense(7 * 7 * 64, activation="relu")(latent_inputs)
-        x = K.layers.Reshape((7, 7, 64))(x)
-        x = K.layers.Conv2DTranspose(64, 3, activation="relu", strides=2, padding="same")(x)
-        x = K.layers.Conv2DTranspose(32, 3, activation="relu", strides=2, padding="same")(x)
-        decoder_outputs = K.layers.Conv2DTranspose(self.channels, 3, activation="sigmoid", padding="same")(x)
-        self.decoder = K.Model(latent_inputs, decoder_outputs, name="decoder")
+        if decoder is not None:
+            self.decoder = decoder
+        else:
+            latent_inputs = K.layers.Input(shape=(self.latent_dim,))
+            x = K.layers.Dense(7 * 7 * 64, activation="relu")(latent_inputs)
+            x = K.layers.Reshape((7, 7, 64))(x)
+            x = K.layers.Conv2DTranspose(64, 3, activation="relu", strides=2, padding="same")(x)
+            x = K.layers.Conv2DTranspose(32, 3, activation="relu", strides=2, padding="same")(x)
+            decoder_outputs = K.layers.Conv2DTranspose(self.channels, 3, activation="sigmoid", padding="same")(x)
+            self.decoder = K.Model(latent_inputs, decoder_outputs, name="decoder")
 
         self.total_loss_tracker = K.metrics.Mean(name="total_loss")
         self.reconstruction_loss_tracker = K.metrics.Mean(
