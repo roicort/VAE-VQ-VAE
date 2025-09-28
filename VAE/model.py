@@ -66,7 +66,7 @@ class VAE(K.Model):
     def train_step(self, data):
         with tf.GradientTape() as tape:
             z_mean, z_log_var, z = self.encoder(data)
-            # Clip para evitar explosión numérica
+            # Clip para evitar explosión numérica en z_log_var
             z_log_var = tf.clip_by_value(z_log_var, -10, 10)
             reconstruction = self.decoder(z)
             reconstruction_loss = K.ops.mean(
@@ -77,6 +77,7 @@ class VAE(K.Model):
             )
             kl_loss = -0.5 * (1 + z_log_var - K.ops.square(z_mean) - K.ops.exp(z_log_var))
             kl_loss = K.ops.mean(K.ops.sum(kl_loss, axis=1))
+            kl_loss = tf.clip_by_value(kl_loss, 0, 10)
             total_loss = reconstruction_loss + kl_loss
         grads = tape.gradient(total_loss, self.trainable_weights)
         self.optimizer.apply_gradients(zip(grads, self.trainable_weights))
