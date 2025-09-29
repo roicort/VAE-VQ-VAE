@@ -13,10 +13,9 @@ class VAE(K.Model):
         self.latent_dim = latent_dim
 
         class Sampling(K.layers.Layer):
-            """Uses (z_mean, z_log_var) to sample z, the vector encoding a digit."""
             def __init__(self, **kwargs):
                 super().__init__(**kwargs)
-                self.seed_generator = K.random.SeedGenerator(1337)
+                self.seed_generator = K.random.SeedGenerator(42)
 
             def call(self, inputs):
                 z_mean, z_log_var = inputs
@@ -26,12 +25,16 @@ class VAE(K.Model):
                 return z_mean + K.backend.exp(0.5 * z_log_var) * epsilon
 
         # Encoder
+
+
         encoder_inputs = K.layers.Input(shape=(self.IMAGE_SIZE, self.IMAGE_SIZE, self.channels))
-        x = K.layers.Conv2D(32, 3, activation='relu', strides=2, padding='same')(encoder_inputs)
-        x = K.layers.Conv2D(64, 3, activation='relu', strides=2, padding='same')(x)
+        x = K.layers.Conv2D(64, 3, strides=2, padding='same', activation='relu')(encoder_inputs)
+        x = K.layers.BatchNormalization()(x)
+        x = K.layers.Conv2D(128, 3, strides=2, padding='same', activation='relu')(x)
+        x = K.layers.BatchNormalization()(x)
+        x = K.layers.Conv2D(256, 3, strides=2, padding='same', activation='relu')(x)
         x = K.layers.Flatten()(x)
-        x = K.layers.Dense(16, activation='relu')(x)
-        x = K.layers.Dense(512, activation='relu')(x)
+        x = K.layers.Dense(256, activation='relu')(x)
         z_mean = K.layers.Dense(latent_dim, name="z_mean")(x)
         z_log_var = K.layers.Dense(latent_dim, name="z_log_var")(x)
         z = Sampling()([z_mean, z_log_var])
@@ -66,8 +69,6 @@ class VAE(K.Model):
     def train_step(self, data):
         with tf.GradientTape() as tape:
             z_mean, z_log_var, z = self.encoder(data)
-            # Clip para evitar explosión numérica en z_log_var
-            z_log_var = tf.clip_by_value(z_log_var, -10, 10)
             reconstruction = self.decoder(z)
             reconstruction_loss = K.ops.mean(
                 K.ops.sum(
@@ -77,7 +78,6 @@ class VAE(K.Model):
             )
             kl_loss = -0.5 * (1 + z_log_var - K.ops.square(z_mean) - K.ops.exp(z_log_var))
             kl_loss = K.ops.mean(K.ops.sum(kl_loss, axis=1))
-            kl_loss = tf.clip_by_value(kl_loss, 0, 10)
             total_loss = reconstruction_loss + kl_loss
         grads = tape.gradient(total_loss, self.trainable_weights)
         self.optimizer.apply_gradients(zip(grads, self.trainable_weights))
